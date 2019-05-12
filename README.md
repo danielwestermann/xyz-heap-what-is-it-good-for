@@ -31,7 +31,7 @@ u01/app/postgres/product/zheap/db_1/bin/psql -c "alter system set log_truncate_o
 /u01/app/postgres/product/zheap/db_1/bin/pg_ctl -D /u02/pgdata/zheap restart -m fast
 ```
 
-Once this is done start the demo with (for displaying the pictures you will need X forwarding):
+Once this is done start the demo with (for displaying the pictures you will need X forwarding if you connect over ssh):
 ```bash
 sudo su - postgres
 ./zheap_demo.sh
