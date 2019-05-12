@@ -7,8 +7,8 @@ To run the demo download the complete repository and then prepare the operating 
 ```bash
 sudo yum install -y gcc openldap-devel python-devel readline-devel redhat-lsb bison flex perl-ExtUtils-Embed zlib-devel crypto-utils openssl-devel pam-devel libxml2-devel libxslt-devel openssh-clients bzip2 net-tools wget screen unzip sysstat xorg-x11-xauth systemd-devel bash-completion cowsay
 sudo groupadd postgres
-useradd -g postgres -m postgres
-sudo mkdir /u01/app
+sudo useradd -g postgres -m postgres
+sudo mkdir -p /u01/app
 sudo mkdir /u02
 sudo chown postgres:postgres /u01/app
 sudo chown postgres:postgres /u02
@@ -24,7 +24,7 @@ make install
 /u01/app/postgres/product/zheap/db_1/bin/initdb -D /u02/pgdata/zheap
 /u01/app/postgres/product/zheap/db_1/bin/pg_ctl -D /u02/pgdata/zheap start
 /u01/app/postgres/product/zheap/db_1/bin/psql -c "alter system set logging_collector='on'" postgres
-u01/app/postgres/product/zheap/db_1/bin/psql -c "alter system set log_truncate_on_rotation='on'" postgres
+/u01/app/postgres/product/zheap/db_1/bin/psql -c "alter system set log_truncate_on_rotation='on'" postgres
 /u01/app/postgres/product/zheap/db_1/bin/psql -c "alter system set log_filename='postgresql-%a.log'" postgres
 /u01/app/postgres/product/zheap/db_1/bin/psql -c "alter system set log_line_prefix='%m - %l - %p - %h - %u@%d '" postgres
 /u01/app/postgres/product/zheap/db_1/bin/psql -c "alter system set log_directory='pg_log'" postgres
