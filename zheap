@@ -1,0 +1,5 @@
+ =================> heap tables
+    echo  =================================================
+    pgbench -T 15 heap
+    pgbench -T 15 zheap
+    echo  ================= tables
