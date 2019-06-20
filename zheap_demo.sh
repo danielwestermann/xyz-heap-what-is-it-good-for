@@ -74,9 +74,20 @@ function _dbi {
 function _zheap_setup_info {
     clear
     echo -e ${COLOR_GREEN}
+    echo " "
+    echo "As this is a demo only talk there are no slides, but you can download this demo here:"
+    echo " "
+    echo "     https://github.com/danielwestermann/xyz-heap-what-is-it-good-for "
+    echo " "
+    _wait_for_next_step "Next?"
+    echo -e ${COLOR_DEFAULT}
+    clear
+    echo -e ${COLOR_GREEN}
     echo "To create this environment follow the steps below"
     echo -e ${COLOR_DEFAULT}
     echo "# sudo yum install -y gcc openldap-devel python-devel readline-devel redhat-lsb bison flex perl-ExtUtils-Embed zlib-devel crypto-utils openssl-devel pam-devel libxml2-devel libxslt-devel openssh-clients bzip2 net-tools wget screen unzip sysstat xorg-x11-xauth systemd-devel bash-completion cowsay"
+    echo "# sudo mkdir /u01 /u02"
+    echo "# sudo chown postgres:postgres /u01 /u02"
     echo "# git clone https://github.com/EnterpriseDB/zheap"
     echo "# cd zheap"
     echo "# PGHOME=/u01/app/postgres/product/zheap/db_1/"
@@ -119,6 +130,7 @@ function _disclaimer {
 
 # Setup the heap database
 function _setup_heap_datbase {
+    pg_ctl -D $PGDATA stop -m fast
     pg_ctl -D $PGDATA start
     psql -X -c "alter system set default_table_access_method='heap'" postgres
     psql -X -c "drop tablespace undotbs" postgres
@@ -175,17 +187,18 @@ function _what_is_bloat {
 function _setup_zheap_database {
     clear
     echo -e ${COLOR_GREEN}
-    echo "There is a new parameter called 'default_table_access_method', both, as a system parameter and a parameter for create table"
+    echo "There is a new parameter called 'default_table_access_method' and 'create table' comes with a new USING clause"
     echo -e ${COLOR_DEFAULT}
     echo " "
     echo "psql -X -c 'show default_table_access_method' heap"
+    echo " "
     psql -X -c "show default_table_access_method" heap;
     echo " "
     echo -e ${COLOR_GREEN}
     echo "The create table syntax is:"
     echo -e ${COLOR_DEFAULT}
     echo " "
-    echo "CREATE TABLE T1 ( a INT ) USING ZHEAP"
+    echo "CREATE TABLE T1 ( a INT ) USING ZHEAP;"
     echo " "
     echo -e ${COLOR_GREEN}
     echo "... This will propably not change anymore as it is already committed, it was 'storage_engine' in the past!"
@@ -220,6 +233,34 @@ function _setup_zheap_database {
     psql -X -c 'create database zheap' postgres
     pgbench -i -s ${PGBENCH_SCALE_FACTOR} zheap 
     _wait_for_next_step "Populated"
+    clear
+    echo -e ${COLOR_GREEN}
+    echo "The default_table_access_method parameter can be set on the database, user or session level as well. As usual."
+    echo -e ${COLOR_DEFAULT}
+    echo " "
+    echo "psql -X -c 'drop database if exists dummy' postgres"
+    echo "psql -X -c 'create database dummy' postgres"
+    echo "psql -X -c 'alter database dummy set default_table_access_method=zheap' postgres"
+    echo "psql -X -c 'select * from pg_db_role_setting' postgres"
+    echo "psql -X -c 'drop user if exists udummy' postgres"
+    echo "psql -X -c 'create user udummy with login' postgres"
+    echo "psql -X -c 'alter user udummy set default_table_access_method=zheap' postgres"
+    echo "psql -X -c 'select * from pg_user where usename = \'udummy\'' postgres"
+    echo "psql -X -c 'set default_table_access_method=zheap' postgres"
+    echo " "
+    _wait_for_next_step "Next?"
+    echo " "
+    psql -X -c 'drop database if exists dummy' postgres
+    psql -X -c 'create database dummy' postgres
+    psql -X -c 'alter database dummy set default_table_access_method=zheap' postgres
+    psql -X -c 'select * from pg_db_role_setting' postgres
+    psql -X -c 'drop user if exists udummy' postgres
+    psql -X -c 'create user udummy with login' postgres
+    psql -X -c 'alter user udummy set default_table_access_method=zheap' postgres
+    psql -X -c "select * from pg_user where usename = 'udummy'" postgres
+    psql -X -c 'set default_table_access_method=zheap' postgres 
+    echo -e ${COLOR_DEFAULT}
+    _wait_for_next_step "Next?"
 }
 
 # compare the size of the tables in heap and zheap
@@ -490,6 +531,7 @@ function _who_writes_undo_and_who_discards {
     echo "once it is no longer required?"
     echo "Do you remember one of the major new features in PostgreSQL 9.4?"
     echo " "
+    _wait_for_next_step "What could have been reused here?"
     _wait_for_next_step "Background workers, right?"
     echo "The same infrastructure is used here:"
     echo -e ${COLOR_DEFAULT}
@@ -498,7 +540,7 @@ function _who_writes_undo_and_who_discards {
     echo " "
     echo " "
     echo -e ${COLOR_GREEN}
-    echo "The discard worker discards all undo segments no longer required"
+    echo "The discard worker discards all undo segments no longer required."
     echo "The undo launcher launches worker processes to perform the undo (one per database)"
     echo "Each backend is attached to a separate undo log to which it writes undo records."
     echo -e ${COLOR_DEFAULT}
@@ -531,6 +573,7 @@ function _do_we_lose_instant_commit_and_rollback {
     psql -X -f /home/postgres/zheap_demo/rollback_zheap.sql zheap
     _wait_for_next_step "Why is it so fast?"
     clear
+    echo " "
     echo "When the size of the rollback segment exceeds a user define size"
     echo "the rollback is executed in the background asynchronously"
     _wait_for_next_step "The parameter to control this is:"
@@ -594,8 +637,58 @@ function _when_do_we_see_bloat {
     _wait_for_next_step "Here we have it. When updates do not fit in the same location there still will be bloat"
 }
 
+function _what_about_fsm_and_vm {
+    clear
+    echo -e ${COLOR_GREEN}
+    echo "What do you think, do we still need the free space and visibility maps with zheap?"
+    echo " "
+    echo -e ${COLOR_DEFAULT}
+    echo "psql -X -c 'create extension pg_freespacemap' zheap"
+    echo "psql -X -c 'create extension pg_visibility' zheap"
+    echo "psql -X -c 'select pg_visibility_map('pgbench_accounts') limit 5' zheap"
+    echo "psql -X -c 'select pg_freespace('pgbench_accounts',5)' zheap"
+    echo "psql -X -c 'vacuum pgbench_accounts' zheap"
+    echo "psql -X -c 'select pg_visibility_map('pgbench_accounts') limit 5' zheap"
+    echo " "
+    _wait_for_next_step "Who dares to guess?"
+    psql -X -c 'create extension pg_freespacemap' zheap
+    psql -X -c 'create extension pg_visibility' zheap
+    psql -X -c "select pg_visibility_map('pgbench_accounts') limit 5" zheap
+    psql -X -c "select pg_freespace('pgbench_accounts',5)" zheap
+    psql -X -c "vacuum pgbench_accounts" zheap
+    psql -X -c "select pg_visibility_map('pgbench_accounts') limit 5" zheap
+    echo " "
+    _wait_for_next_step "Why do we need the visibility map?"
+    _wait_for_next_step "Index only scans?"
+    _wait_for_next_step "That brings us to the next question: What about HOT (Heap only tuples)?"
+    _wait_for_next_step "Do we still need that?"
+    clear
+    echo "psql -X -c 'select relname,n_tup_hot_upd from pg_stat_user_tables where relname = 'pgbench_accounts' zheap"
+    echo "psql -X -c '\d pgbench_accounts' zheap"
+    echo " "
+    psql -X -c "select relname,n_tup_hot_upd from pg_stat_user_tables where relname = 'pgbench_accounts'" zheap
+    psql -X -c '\d pgbench_accounts' zheap
+    echo " "
+    _wait_for_next_step "HOT updates occur when we update columns which are not in the index, right?"
+    echo "psql -X -c 'update pgbench_accounts set filler = 'aaa' where aid < 10000' zheap"
+    echo "psql -X -c 'select relname,n_tup_hot_upd from pg_stat_user_tables where relname = 'pgbench_accounts' zheap"
+    echo " "
+    psql -X -c "update pgbench_accounts set filler = 'aaa' where aid < 10000" zheap
+    psql -X -c "select relname,n_tup_hot_upd from pg_stat_user_tables where relname = 'pgbench_accounts'" zheap
+    psql -X -c "explain(analyze) select aid from pgbench_accounts where aid < 10" zheap
+    echo " "
+    _wait_for_next_step "Doing the same in the heap database"
+    echo "psql -X -c 'update pgbench_accounts set filler = 'aaa' where aid < 10000' heap"
+    echo "psql -X -c 'select relname,n_tup_hot_upd from pg_stat_user_tables where relname = 'pgbench_accounts' heap"
+    psql -X -c "update pgbench_accounts set filler = 'aaa' where aid < 10000" heap
+    psql -X -c "select relname,n_tup_hot_upd from pg_stat_user_tables where relname = 'pgbench_accounts'" heap
+    psql -X -c "explain(analyze) select aid from pgbench_accounts where aid < 10" heap
+    _wait_for_next_step "Next?"
+}
+
 function _a_few_words_about_pluggable_storage {
-    clear;
+    clear
+    echo " "
     echo "Implementing a different storage format, such as zheap, would not be possible without?"
     echo " "
     _wait_for_next_step "Quite a few patches are already committed to PostgreSQL 12, any idea"
@@ -675,6 +768,8 @@ _who_writes_undo_and_who_discards
 _do_we_lose_instant_commit_and_rollback
 # when do we still see bloat?
 _when_do_we_see_bloat
+# do we still need the fsm and vm?
+_what_about_fsm_and_vm
 ## a few words about pluggable storage
 _a_few_words_about_pluggable_storage
 ## conclusion and questions
